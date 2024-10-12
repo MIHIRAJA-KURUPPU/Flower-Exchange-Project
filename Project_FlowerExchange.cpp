@@ -4,9 +4,13 @@
 #include <sstream>            // For string stream manipulation
 #include <string>             // For string manipulations
 #include <unordered_set>      // For unordered set functionality
-
+#include <istream>
+#include <chrono>
+#include <ctime>
+using namespace std::chrono;
 using namespace std;
-
+ifstream ifile("Orders.csv");
+ofstream ofile("Execution_Rep.csv");
 // Function declaration to check order validity
 string validateOrder(const vector<string>& fields);
 
@@ -27,7 +31,7 @@ public:
     Order(string clientID, string item, int direction, int amount, double cost) 
         : clientID(clientID), item(item), direction(direction), amount(amount), cost(cost) {}
 };
-
+vector<Order> orders;
 // OrderBookItem class definition for order book entries
 class OrderBookEntry {
 public:
@@ -207,4 +211,11 @@ int main() {
     ordersFile.close();
     cout << "Processing complete." << endl;
     return 0;
+}
+string currentDate()
+{
+    time_t now = time(0); // get current date and time
+    tm *ltm = localtime(&now);
+
+    return to_string(1900 + ltm->tm_year) + "-" + to_string(1 + ltm->tm_mon) + "-" + to_string(ltm->tm_mday);
 }
