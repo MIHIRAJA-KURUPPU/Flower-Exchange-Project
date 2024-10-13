@@ -3,219 +3,78 @@
 #include <fstream>            // For file handling functionalities
 #include <sstream>            // For string stream manipulation
 #include <string>             // For string manipulations
-#include <unordered_set>      // For unordered set functionality
-#include <istream>
-#include <chrono>
-#include <ctime>
-using namespace std::chrono;
+
 using namespace std;
-ifstream ifile("Orders.csv");
-ofstream ofile("Execution_Rep.csv");
-// Function declaration to check order validity
-string validateOrder(const vector<string>& fields);
 
-// Order class definition
-class Order {
-public:
-    string clientID;
-    string item;
-    int direction;  // 1 for buy, 2 for sell
-    int amount;
-    double cost;
+string Check_Validity(const vector<string>& v);
 
-    string orderIdentifier;
-    int orderStatus;
-    string rejectionReason;
-
-    // Constructor
-    Order(string clientID, string item, int direction, int amount, double cost) 
-        : clientID(clientID), item(item), direction(direction), amount(amount), cost(cost) {}
-};
-vector<Order> orders;
-// OrderBookItem class definition for order book entries
-class OrderBookEntry {
-public:
-    string identifier;
-    int amount;
-    double cost;
-
-    OrderBookEntry(string identifier, int amount, double cost)
-        : identifier(identifier), amount(amount), cost(cost) {}
-};
-
-// OrderBook class for managing orders
-class OrderBook {
-private:
-    string itemType;
-    vector<OrderBookEntry> buyOrders;
-    vector<OrderBookEntry> sellOrders;
-
-public:
-    OrderBook(string itemType) {
-        this->itemType = itemType;
-    }
-
-    void addOrder(const Order& order) {
-        if (order.direction == 1) {  // Buy order
-            buyOrders.emplace_back(order.orderIdentifier, order.amount, order.cost);
-        } else {  // Sell order
-            sellOrders.emplace_back(order.orderIdentifier, order.amount, order.cost);
-        }
-    }
-};
-
-// Function to check the validity of an order
-string validateOrder(const vector<string>& fields) {
-    static unordered_set<string> validItems = {"Rose", "Lavender", "Lotus", "Tulip", "Orchid"};
-
-    // Check for the correct number of fields
-    if (fields.size() != 5) {
-        return "Invalid input size";
-    }
-
-    const string& clientID = fields[0];
-    const string& item = fields[1];
-    int direction, amount;
-    double cost;
-
-    // Check for empty fields
-    if (clientID.empty()) return "Invalid client order ID";
-    if (item.empty()) return "Invalid item";
-    if (fields[2].empty() || fields[3].empty() || fields[4].empty()) return "Missing numerical fields";
-
-    // Convert and validate direction, amount, and cost
-    try {
-        direction = stoi(fields[2]);
-        amount = stoi(fields[3]);
-        cost = stod(fields[4]);
-    } catch (const invalid_argument&) {
-        return "Invalid numerical conversion";
-    }
-
-    // Validate item
-    if (validItems.find(item) == validItems.end()) {
-        return "Invalid item";
-    }
-
-    // Validate direction
-    if (direction != 1 && direction != 2) {
-        return "Invalid direction";
-    }
-
-    // Validate cost
-    if (cost < 0) {
-        return "Invalid cost";
-    }
-
-    // Validate amount (should be a multiple of 10, between 10 and 1000)
-    if (amount < 10 || amount > 1000 || amount % 10 != 0) {
-        return "Invalid amount";
-    }
-
-    return "";  // Valid order
-}
+// Input and output file streams
+ifstream input_file("Orders.csv");
+ofstream output_file("Execution_Rep.csv");
 
 int main() {
-    // Open the Orders.csv file
-    ifstream ordersFile("Orders.csv");
-
-    // Check if the file opened successfully
-    if (!ordersFile.is_open()) {
-        cout << "Error: Unable to open the file." << endl;
-        return 1;  // Exit with an error code
+    // Check if the input file was opened successfully
+    if (!input_file.is_open()) {
+        cerr << "Error opening input file." << endl;
+        return 1; // Error return code
     }
+
+    // Check if the output file was opened successfully
+    if (!output_file.is_open()) {
+        cerr << "Error opening output file." << endl;
+        return 1; // Error return code
+    }
+
+    // Write headers to the output file
+    output_file << "execution_rep.csv\n"; // Write to A1 and move to the next line
+    output_file << "Order ID, Client Order ID, Instrument, Side, Exec Status, Quantity, Price, Reason\n";
 
     string line;
+    // Read and skip the headers from the input file
+    getline(input_file, line); // Skip first line
+    getline(input_file, line); // Skip second line
 
-    // Read the header line and discard it
-    getline(ordersFile, line);  
-    // Initialize order books for different items
-    OrderBook roseBook("Rose");
-    OrderBook lavenderBook("Lavender");
-    OrderBook tulipBook("Tulip");
-    OrderBook orchidBook("Orchid");
-    OrderBook lotusBook("Lotus");
-
-    int orderCounter = 1;
-
-    // Debug message indicating the start of processing
-    cout << "Starting order processing..." << endl;
-
-    // Read each line in the file
-    while (getline(ordersFile, line)) {
-        stringstream ss(line);
+    while (getline(input_file, line)) {  // Read each line from the input file
+        stringstream lineStream(line);
         vector<string> fields;
-        string cell;
+        string field;
 
-        // Split the line into fields
-        while (getline(ss, cell, ',')) {
-            fields.push_back(cell);
+        // Split the line by commas and store each field in 'fields'
+        while (getline(lineStream, field, ',')) {
+            fields.push_back(field);
         }
 
-        // Debug: Print the fields being processed
-        cout << "Processing row: ";
-        for (const string& s : fields) {
-            cout << "[" << s << "] ";
-        }
-        cout << endl;
+        // Check the validity of the order
+        string reason = Check_Validity(fields);
 
-        // Validate the order
-        string validationMessage = validateOrder(fields);
-        string orderIdentifier = "ord" + to_string(orderCounter);
-
-        // Debug message before converting to numerical values
-        cout << "Attempting to convert direction: " << fields[2] << ", amount: " << fields[3] << ", cost: " << fields[4] << endl;
-
-        try {
-            int direction = stoi(fields[2]);
-            int amount = stoi(fields[3]);
-            double cost = stod(fields[4]);
-
-            Order order(orderIdentifier, fields[1], direction, amount, cost);
-
-            // Debug message after order creation
-            cout << "Created order: " << orderIdentifier << " for item: " << fields[1] << endl;
-
-            // If order is valid, add it to the respective order book
-            if (validationMessage.empty()) {
-                if (fields[1] == "Rose") {
-                    roseBook.addOrder(order);
-                } else if (fields[1] == "Lavender") {
-                    lavenderBook.addOrder(order);
-                } else if (fields[1] == "Lotus") {
-                    lotusBook.addOrder(order);
-                } else if (fields[1] == "Tulip") {
-                    tulipBook.addOrder(order);
-                } else if (fields[1] == "Orchid") {
-                    orchidBook.addOrder(order);
-                }
-
-                // Debug message indicating the order was added successfully
-                cout << "Order added to book for item: " << fields[1] << endl;
-            } else {
-                // Debug message for invalid orders
-                cout << "Order invalid: " << validationMessage << endl;
-            }
-        } catch (const invalid_argument& e) {
-            cout << "Error parsing order: " << e.what() << " in row: " << line << endl;
-            continue;
-        } catch (const out_of_range& e) {
-            cout << "Out of range error: " << e.what() << " in row: " << line << endl;
-            continue;
-        }
-
-        orderCounter++;
     }
 
-    // Close the file
-    ordersFile.close();
-    cout << "Processing complete." << endl;
+    // Close the files
+    input_file.close();
+    output_file.close();
+    
     return 0;
 }
-string currentDate()
-{
-    time_t now = time(0); // get current date and time
-    tm *ltm = localtime(&now);
 
-    return to_string(1900 + ltm->tm_year) + "-" + to_string(1 + ltm->tm_mon) + "-" + to_string(ltm->tm_mday);
+string Check_Validity(const vector<string>& v) {
+    if (v[0].empty()) return "Invalid client order ID";
+    if (v[1].empty()) return "Invalid instrument";
+    if (v[2].empty()) return "Invalid side";
+    if (v[3].empty()) return "Invalid size";
+    if (v[4].empty()) return "Invalid price";
+
+    int side = stoi(v[2]);
+    int quantity = stoi(v[3]);
+    double price = stod(v[4]);
+
+    if (v[1] != "Rose" && v[1] != "Lavender" && v[1] != "Tulip" && v[1] != "Orchid" && v[1] != "Lotus")
+        return "Invalid instrument";
+    if (side != 1 && side != 2)
+        return "Invalid side";
+    if (price < 0)
+        return "Invalid price";
+    if (quantity % 10 != 0 || quantity < 10 || quantity > 1000)
+        return "Invalid size";
+
+    return ""; // Return empty string if the order is valid
 }
