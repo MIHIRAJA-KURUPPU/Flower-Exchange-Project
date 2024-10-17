@@ -281,7 +281,13 @@ public:
     // Writes order details to the output file
     void writeLineOutputFile(Order order)
     {
-        output_file << order.orderID << "," << order.clientOrderID << "," << order.instrument << "," << order.side << "," << order.status << "," << order.quantity << "," << order.price << "," << order.reason << endl;
+        output_file << order.orderID << "," 
+        << order.clientOrderID << "," 
+        << order.instrument << "," 
+        << order.side << "," 
+        << order.status << "," 
+        << order.quantity << "," 
+        << order.reason << endl;
     }
 };
 
