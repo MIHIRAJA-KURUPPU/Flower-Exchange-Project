@@ -74,17 +74,11 @@
     <li>Review the output <code>execution_rep.csv</code> file to analyze the execution reports.</li>
 </ol>
 
-<h2>Evaluation Criteria</h2>
-<ul>
-    <li><strong>Design and Coding Practices</strong>: Clear and efficient code structure.</li>
-    <li><strong>Functional Accuracy</strong>: The system must correctly process orders and generate valid execution reports.</li>
-    <li><strong>Performance</strong>: The system should handle large inputs efficiently.</li>
-</ul>
 
 <h2>Contributors</h2>
 <ul>
-    <li>[Mihiraja Kuruppu]</li>
-    <li>[Chandeepa Janith]</li>
+    <li>Mihiraja Kuruppu</li>
+    <li>Chandeepa Janith</li>
 </ul>
 
 </body>
