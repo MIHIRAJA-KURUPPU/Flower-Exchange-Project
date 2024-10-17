@@ -12,8 +12,8 @@ using namespace std::chrono;
 using namespace std;
 
 
-ifstream input_file("Orders.csv");
-ofstream output_file("Execution_Rep.csv");
+ifstream input_file("Orders_Example7.csv");
+ofstream output_file("ExecReports7.csv");
 
 string  Check_Validity(vector<string> v);
 string formatTime(double elapsed_time);
@@ -281,13 +281,7 @@ public:
     // Writes order details to the output file
     void writeLineOutputFile(Order order)
     {
-        output_file << order.orderID << "," 
-        << order.clientOrderID << "," 
-        << order.instrument << "," 
-        << order.side << "," 
-        << order.status << "," 
-        << order.quantity << "," 
-        << order.reason << endl;
+        output_file << order.orderID << "," << order.clientOrderID << "," << order.instrument << "," << order.side << "," << order.status << "," << order.quantity << "," << order.price << "," << order.reason << endl;
     }
 };
 
