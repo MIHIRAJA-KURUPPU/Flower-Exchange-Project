@@ -1,0 +1,8 @@
+execution_rep.csv
+Order ID, Client Order ID, Instrument, Side, Execution Status, Quantity, Price, Reason
+ord1,aa13,,1,Rejected,100,55,Invalid instrument
+ord2,aa14,Rose,3,Rejected,100,65,Invalid side
+ord3,aa15,Lavender,2,Rejected,101,1,Invalid size
+ord4,aa16,Tulip,1,Rejected,100,-1,Invalid price
+ord5,aa17,Orchid,1,Rejected,1000,-1,Invalid price
+00000000-0000000.001

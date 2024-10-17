@@ -75,41 +75,43 @@ public:
 class OrderBook
 {
 public:
-    string instrument; // The instrument for this order book (e.g., stock symbol)
-    vector<OrderBookItem> buy; // Vector to store buy orders
-    vector<OrderBookItem> sell; // Vector to store sell orders
+    string instrument; // Instrument or security being traded (e.g., stock symbol)
+    vector<OrderBookItem> buy; // Vector to hold buy orders
+    vector<OrderBookItem> sell; // Vector to hold sell orders
 
-    // Constructor to initialize the order book with the specified instrument
+    // Constructor to initialize the order book with a specific instrument
     OrderBook(string instrument)
     {
         this->instrument = instrument;
     }
 
-    // Method to add an order to the order book (either buy or sell)
+    // Adds a new order to the order book
     void addOrder(Order order)
     {
-        vector<string> status = {"New", "Rejected", "Fill", "PFill"}; // Order statuses
+        // Define possible order statuses: New, Rejected, Fill, Partial Fill
+        vector<string> status = {"New", "Rejected", "Fill", "PFill"};
 
-        // Check if the order is valid by checking for any reason of rejection
+        // Check if the order is valid (if not, reject it)
         if (order.reason != "")
         {
-            order.status = status[1]; // Set status to 'Rejected'
-            writeLineOutputFile(order); // Log the order to the output file
-            return; // Exit, since the order is invalid
+            order.status = status[1]; // Set status to "Rejected"
+            writeLineOutputFile(order); // Log the order details
+            return; // Exit function as the order is invalid
         }
 
-        // Create a new order book item for this order
+        // Create a new order book item from the order
         OrderBookItem *item = new OrderBookItem(order.orderID, order.quantity, order.price);
 
-        // Check if it is a buy order
+        // Process the order based on its side (buy or sell)
         if (order.side == 1)
         {
-            // If the sell side is empty or the lowest sell price is higher than the buy order price
+            // Buy order processing
+            // If the sell side is empty or the lowest sell price is higher than the buy price, insert the order
             if (sell.empty() || sell.begin()->price > order.price)
             {
-                order.status = status[0]; // Set status to 'New'
-                writeLineOutputFile(order); // Log the order to the output file
-                insertInBuyVector(item); // Insert the order into the buy vector
+                order.status = status[0]; // Set status to "New"
+                writeLineOutputFile(order); // Log the order
+                insertInBuyVector(item); // Insert order into the buy vector
             }
             else
             {
@@ -119,13 +121,13 @@ public:
         }
         else
         {
-            // If it is a sell order
-            // If the buy side is empty or the highest buy price is lower than the sell order price
+            // Sell order processing
+            // If the buy side is empty or the highest buy price is lower than the sell price, insert the order
             if (buy.empty() || buy.begin()->price < order.price)
             {
-                order.status = status[0]; // Set status to 'New'
-                writeLineOutputFile(order); // Log the order to the output file
-                insertInSellVector(item); // Insert the order into the sell vector
+                order.status = status[0]; // Set status to "New"
+                writeLineOutputFile(order); // Log the order
+                insertInSellVector(item); // Insert order into the sell vector
             }
             else
             {
@@ -135,87 +137,89 @@ public:
         }
     }
 
-    // Inserts a buy order into the buy vector in descending price order
+    // Inserts an order into the buy vector in descending order of price
     void insertInBuyVector(OrderBookItem *item)
     {
-        if (buy.empty()) // If the buy vector is empty, add the item
+        if (buy.empty())
         {
-            buy.push_back(*item);
+            buy.push_back(*item); // If buy vector is empty, just insert the item
         }
         else
         {
+            // Find the correct position to insert the new item based on price
             auto it = buy.begin();
-            // Find the correct position to insert based on price (descending order)
             while (it != buy.end() && it->price >= item->price)
             {
                 ++it;
             }
-            buy.insert(it, *item); // Insert in the correct place
+            buy.insert(it, *item); // Insert the order at the correct place
         }
     }
 
-    // Inserts a sell order into the sell vector in ascending price order
+    // Inserts an order into the sell vector in ascending order of price
     void insertInSellVector(OrderBookItem *item)
     {
-        if (sell.empty()) // If the sell vector is empty, add the item
+        if (sell.empty())
         {
-            sell.push_back(*item);
+            sell.push_back(*item); // If sell vector is empty, just insert the item
         }
         else
         {
+            // Find the correct position to insert the new item based on price
             auto it = sell.begin();
-            // Find the correct position to insert based on price (ascending order)
             while (it != sell.end() && it->price <= item->price)
             {
                 ++it;
             }
-            sell.insert(it, *item); // Insert in the correct place
+            sell.insert(it, *item); // Insert the order at the correct place
         }
     }
 
-    // Matches a buy order with available sell orders
+// Matches a buy order with existing sell orders
     void matchOrderWithSell(OrderBookItem *item, Order &order, vector<string> &status)
     {
-        // Continue matching while there are sell orders and the buy price is high enough
+        // Continue matching while there are sell orders at a price <= the buy price
         while (!sell.empty() && sell.begin()->price <= order.price && order.quantity > 0)
         {
-            // If the sell order quantity is less than the buy order quantity
             if (sell.begin()->quantity < order.quantity)
             {
-                order.status = status[3]; // Set status to 'PFill' (Partial Fill)
+                // Partial fill: Buy order partially filled
+                order.status = status[3]; // Partial Fill
                 output_file << order.orderID << "," << order.clientOrderID << "," << order.instrument << "," << order.side << "," << order.status << "," << sell.begin()->quantity << "," << order.price << "," << order.reason << endl;
 
-                // Reduce buy order quantity by the sell order's quantity
+                // Decrease buy order quantity by the matched sell order quantity
                 order.quantity -= sell.begin()->quantity;
-
-                // Mark the sell order as filled
+                // Update the matched sell order status to "Fill" and log it
                 Order *ord = findOrderByOrdID(sell.begin()->orderID);
-                ord->status = status[2]; // Set status to 'Fill'
-                writeLineOutputFile(*ord); // Log the filled order
-                sell.erase(sell.begin()); // Remove the filled sell order
+                ord->status = status[2]; // Fill
+                writeLineOutputFile(*ord);
+                
+                sell.erase(sell.begin()); // Remove the matched sell order
             }
             else
             {
-                // Fully fill the buy order with the current sell order
-                order.status = status[2]; // Set status to 'Fill'
-                order.price = sell.begin()->price; // Use the sell price for the transaction
-                writeLineOutputFile(order); // Log the filled order
+                // Full fill: Buy order fully filled
+                order.status = status[2]; // Fill
+                order.price = sell.begin()->price; // Set buy order price to matched sell price
+                writeLineOutputFile(order); // Log the filled buy order
 
-                // Reduce the sell order's quantity by the buy order's quantity
+                // Decrease sell order quantity by the buy order quantity
+                int matched_quantity = order.quantity;
                 sell.begin()->quantity -= order.quantity;
-                order.quantity = 0; // The buy order is completely filled
+                order.quantity = 0; // Buy order fully filled
 
-                // If the sell order is now fully filled, remove it
+                // If sell order is fully filled, remove it
                 if (sell.begin()->quantity == 0)
                 {
                     Order *ord = findOrderByOrdID(sell.begin()->orderID);
-                    ord->status = status[2]; // Set status to 'Fill'
-                    writeLineOutputFile(*ord); // Log the filled order
-                    sell.erase(sell.begin()); // Remove the filled sell order
+                    ord->status = status[2]; // Fill
+                    ord->quantity = matched_quantity; // Fill
+                    writeLineOutputFile(*ord);
+                    sell.erase(sell.begin()); // Remove the matched sell order
                 }
             }
         }
-        // If there is still an unfilled portion of the buy order, insert it into the buy vector
+        // If there's any remaining buy quantity, insert it into the buy vector
         if (order.quantity > 0)
         {
             item->quantity = order.quantity;
@@ -223,48 +227,50 @@ public:
         }
     }
 
-    // Matches a sell order with available buy orders
+    // Matches a sell order with existing buy orders
     void matchOrderWithBuy(OrderBookItem *item, Order &order, vector<string> &status)
     {
-        // Continue matching while there are buy orders and the sell price is low enough
+        // Continue matching while there are buy orders at a price >= the sell price
         while (!buy.empty() && buy.begin()->price >= order.price && order.quantity > 0)
         {
-            // If the buy order quantity is less than the sell order quantity
             if (buy.begin()->quantity < order.quantity)
             {
-                order.status = status[3]; // Set status to 'PFill' (Partial Fill)
+                // Partial fill: Sell order partially filled
+                order.status = status[3]; // Partial Fill
                 output_file << order.orderID << "," << order.clientOrderID << "," << order.instrument << "," << order.side << "," << order.status << "," << buy.begin()->quantity << "," << buy.begin()->price << "," << order.reason << endl;
 
-                // Reduce sell order quantity by the buy order's quantity
+                // Decrease sell order quantity by the matched buy order quantity
                 order.quantity -= buy.begin()->quantity;
 
-                // Mark the buy order as filled
+                // Update the matched buy order status to "Fill" and log it
                 Order *ord = findOrderByOrdID(buy.begin()->orderID);
-                ord->status = status[2]; // Set status to 'Fill'
-                writeLineOutputFile(*ord); // Log the filled order
-                buy.erase(buy.begin()); // Remove the filled buy order
+                ord->status = status[2]; // Fill
+                writeLineOutputFile(*ord);
+                buy.erase(buy.begin()); // Remove the matched buy order
             }
             else
             {
-                // Fully fill the sell order with the current buy order
-                order.status = status[2]; // Set status to 'Fill'
-                writeLineOutputFile(order); // Log the filled order
+                // Full fill: Sell order fully filled
+                order.status = status[2]; // Fill
+                writeLineOutputFile(order); // Log the filled sell order
 
-                // Reduce the buy order's quantity by the sell order's quantity
+                // Decrease buy order quantity by the sell order quantity
+                int matched_quantity = order.quantity;
                 buy.begin()->quantity -= order.quantity;
-                order.quantity = 0; // The sell order is completely filled
+                order.quantity = 0; // Sell order fully filled
 
-                // If the buy order is now fully filled, remove it
+                // If buy order is fully filled, remove it
                 if (buy.begin()->quantity == 0)
                 {
                     Order *ord = findOrderByOrdID(buy.begin()->orderID);
-                    ord->status = status[2]; // Set status to 'Fill'
-                    writeLineOutputFile(*ord); // Log the filled order
-                    buy.erase(buy.begin()); // Remove the filled buy order
+                    ord->status = status[2]; // Fill
+                    ord->quantity = matched_quantity; // Fill
+                    writeLineOutputFile(*ord);
+                    buy.erase(buy.begin()); // Remove the matched buy order
                 }
             }
         }
-        // If there is still an unfilled portion of the sell order, insert it into the sell vector
+        // If there's any remaining sell quantity, insert it into the sell vector
         if (order.quantity > 0)
         {
             item->quantity = order.quantity;
@@ -272,7 +278,7 @@ public:
         }
     }
 
-    // Writes order details to the output file for logging purposes
+    // Writes order details to the output file
     void writeLineOutputFile(Order order)
     {
         output_file << order.orderID << "," << order.clientOrderID << "," << order.instrument << "," << order.side << "," << order.status << "," << order.quantity << "," << order.price << "," << order.reason << endl;
@@ -312,10 +318,9 @@ int main()
     // initially create 5 order books
     OrderBook *rose = new OrderBook("Rose");
     OrderBook *lavender = new OrderBook("Lavender");
-    OrderBook *lotus = new OrderBook("Lotus");
     OrderBook *tulip = new OrderBook("Tulip");
     OrderBook *orchid = new OrderBook("Orchid");
-    
+    OrderBook *lotus = new OrderBook("Lotus");
 
     int ordNumber = 1;
     // read all the rows in the input file
