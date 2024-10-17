@@ -83,8 +83,8 @@
 
 <h2>Contributors</h2>
 <ul>
-    <li>[Your Name]</li>
-    <li>[Collaborator's Name]</li>
+    <li>[Mihiraja Kuruppu]</li>
+    <li>[Chandeepa Janith]</li>
 </ul>
 
 </body>
